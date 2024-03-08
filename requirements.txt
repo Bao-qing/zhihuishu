@@ -1,0 +1,5 @@
+requests~=2.31.0
+pillow~=10.2.0
+ttkbootstrap~=1.10.1
+tqdm~=4.66.2
+pycryptodome~=3.11.0

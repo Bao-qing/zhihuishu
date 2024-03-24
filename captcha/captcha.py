@@ -1,12 +1,10 @@
 import base64
 import json
 import re
-import requests
-import subprocess
-from functools import partial
 
-subprocess.Popen = partial(subprocess.Popen, encoding='utf-8')
-import execjs
+import requests
+
+from captcha.yidun_encrypt import yidun_encrypt
 
 
 class Captcha:
@@ -14,6 +12,7 @@ class Captcha:
         self.id = id
         self.referer = referer
         self.result = None
+        self.type = None
         self.ctx = self.load_js()
         # 加载js文件后，获取fp和callback
         self.fp = self.ctx.call("fp")
@@ -21,8 +20,8 @@ class Captcha:
 
         # 获取验证配置
         self.conf = json.loads(self.get_config())
-        self.captchar_conf = json.loads(self.get_captchar())
-        self.captchar_data = self.format_captchar_data()
+        self.captchar_conf = self.get_captcha()
+        self.captcha_data = self.format_captcha_data()
 
     def get_config(self):
         """
@@ -42,7 +41,7 @@ class Captcha:
         params = {
             "referer": self.referer,
             "zoneId": "",
-            "dt": "mb4hpi1g6N9AA1FRFELBoZJAWfjtjfZm",
+            # "dt": "TGloUsmhPF9FFxQFEAeVuWYDl9KV5leG",
             "id": self.id,
             "ipv6": "false",
             "runEnv": "10",
@@ -52,17 +51,23 @@ class Captcha:
         }
 
         response = requests.get(url, headers=headers, params=params)
-        print(response.text)
+        # print(response.text)
         return re.findall("\\((.*)\\)", response.text)[0]
 
     def load_js(self):
         """
-        加载js文件
+        加载加密函数
         :return:
         """
-        with open("captcha/encrypt.js", "r", encoding="UTF-8") as f:
-            all_js = f.read()
-        ctx = execjs.compile(all_js)
+        # """
+        # 加载js文件
+        # :return:
+        # """
+        # with open("captcha/encrypt.js", "r", encoding="UTF-8") as f:
+        #     all_js = f.read()
+        # ctx = execjs.compile(all_js)
+
+        ctx = yidun_encrypt()
         return ctx
 
     def encrypt_check_data(self, move_rate):
@@ -72,7 +77,7 @@ class Captcha:
         :return: 加密后的验证数据
         """
 
-        return self.ctx.call("get_data", self.captchar_data["token"], move_rate)
+        return self.ctx.call("get_data", self.captcha_data["token"], move_rate)
 
     def encrypt_login_data(self, username, password, validate, fp):
         """
@@ -85,7 +90,7 @@ class Captcha:
         """
         return self.ctx.call("login_encrypt", username, password, validate, fp)
 
-    def get_captchar(self):
+    def get_captcha(self):
         """
         获取验证码
         :param
@@ -113,11 +118,11 @@ class Captcha:
             "zoneId": self.conf["data"]["zoneId"],
             "acToken": self.conf["data"]["ac"]["token"],
             "id": self.id,
-            "dt": "mb4hpi1g6N9AA1FRFELBoZJAWfjtjfZm",
+            # "dt": "TGloUsmhPF9FFxQFEAeVuWYDl9KV5leG",
             "fp": self.fp,
             "https": "true",
             "type": "2",
-            "version": "2.24.0",
+            "version": "2.26.1",
             "dpr": "1.5",
             "dev": "3",
             "cb": self.cb,
@@ -139,10 +144,20 @@ class Captcha:
         response = requests.get(url, headers=headers, params=params)
 
         # {"data":{"bg":["https://necaptcha.nosdn.127.net/0e8dd1c225e94c438e5234812913446e.jpg","https://necaptcha1.nosdn.127.net/0e8dd1c225e94c438e5234812913446e.jpg"],"front":["https://necaptcha.nosdn.127.net/eb8f980cbbf4453492f69c52b5795219.png","https://necaptcha1.nosdn.127.net/eb8f980cbbf4453492f69c52b5795219.png"],"token":"4137c182bc0c4bcfb06a8d0a7f42a80d","type":2,"zoneId":"CN31"},"error":0,"msg":"ok"}
+        response_data = json.loads(re.findall("\\((.*)\\)", response.text)[0])
 
-        return re.findall("\\((.*)\\)", response.text)[0]
+        # print(response_data)
+        # 滑块 11 点选 2
+        if response_data['data']["type"] == 2:
+            print("滑块")
+        if response_data['data']["type"] == 11:
+            print("点选")
 
-    def check_captchar(self, move_rate):
+        self.type = response_data['data']["type"]
+
+        return response_data
+
+    def check_captcha(self, move_rate):
         """
         提交验证
         :param: move_rate: 验证码滑块移动距离和总长度的比值，范围0-1
@@ -164,11 +179,11 @@ class Captcha:
         url = "http://c.dun.163.com/api/v3/check"
 
         params = {
-            "referer": "http://app.miit-eidc.org.cn/miitxxgk/gonggao/xxgk/queryQyData",
+            "referer": self.referer,
             "zoneId": "CN31",
-            "dt": "GWGte120lfdFQkFVUFeR5dCkL9BcQwab",
+            # "dt": "TGloUsmhPF9FFxQFEAeVuWYDl9KV5leG",
             "id": self.id,
-            "token": self.captchar_data["token"],
+            "token": self.captcha_data["token"],
             "acToken": self.conf["data"]["ac"]["token"],
             "data": json.dumps(data),
             "width": "320",
@@ -183,25 +198,47 @@ class Captcha:
             "callback": "__JSONP_7oahebp_1"
         }
         response = requests.get(url, headers=headers, params=params)
-        # print("验证码验证结果：", response.text)
+
         return re.findall("\\((.*)\\)", response.text)[0]
 
-    def format_captchar_data(self):
+    def format_captcha_data(self):
         """
         格式化验证码数据
-        :return: 包含背景图，前景图和token的字典
+        :return: 包含背景图，前景图（提示语），token和type(int)的字典
         """
+        # 如果是点选，front里是提示语
         bg = requests.get(self.captchar_conf["data"]["bg"][0])
         bg = str(base64.b64encode(bg.content)).replace("b'", "").replace("'", "")
-        front = requests.get(self.captchar_conf["data"]["front"][0])
-        front = str(base64.b64encode(front.content)).replace("b'", "").replace("'", "")
+
+        if self.captchar_conf["data"]["type"] == 2:
+            front = requests.get(self.captchar_conf["data"]["front"][0])
+            front = str(base64.b64encode(front.content)).replace("b'", "").replace("'", "")
+
+        elif self.captchar_conf["data"]["type"] == 11:
+            front = self.captchar_conf["data"]["front"]
+
+        # print("front:\t", front)
 
         token = self.captchar_conf["data"]["token"]
 
         charchar_data = {
             "smallImage": front,
             "bigImage": bg,
-            "token": token
+            "token": token,
+            "type": self.type
         }
         return charchar_data
 
+# if __name__ == "__main__":
+# captcha_referer = "https://passport.zhihuishu.com/login"
+# # 获取手机验证码和密码登录不一样
+# captcha_id = "73a18dc827b24b18ad0783701a75277d"
+# capt_cha = Captcha(captcha_id, captcha_referer)
+#
+# # 获取滑块移动距离（比例，0-1）
+# move_rate = get_gap(capt_cha.captcha_data) / 320 * 100
+# #print(move_rate)
+#
+# # 提交，直接传入移动比例即可，返回验证结果，包含validate和token等
+# res = capt_cha.check_captcha(move_rate)
+# print(res)

@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter import Tk
-
+import sys
 import base64
 import ctypes
 import io
@@ -113,11 +113,11 @@ class WinguiVerify(Toplevel):
 
 # 验证码窗口
 class WinVerify(WinguiVerify):
-    def __init__(self, captchar_data, conf):
+    def __init__(self, captcha_data, conf):
         self.check_res = None
         self.move_rate = 0
         self.success = False
-        self.captchar_data = captchar_data
+        self.captcha_data = captcha_data
         self.conf = conf
         super().__init__()
         self.loadImg()
@@ -141,7 +141,7 @@ class WinVerify(WinguiVerify):
     def submit(self, evt):
         self.move_rate = self.tk_scale_lm35sfc1.get()
         self.tk_lable_tips["text"] = "验证中..."
-        res = capt_cha.check_captchar(self.move_rate)
+        res = capt_cha.check_captcha(self.move_rate)
         res_json = json.loads(res)
         self.check_res = res_json
         result = res_json["data"]["result"]
@@ -180,7 +180,7 @@ class WinVerify(WinguiVerify):
         if self.winfo_exists():
             if capt_cha.result is not None:
                 capt_cha.__init__(captcha_id, captcha_referer)
-                self.captchar_data = capt_cha.captchar_data
+                self.captcha_data = capt_cha.captcha_data
                 # 滑块归位
                 self.tk_scale_lm35sfc1.set(0)
                 # 提示文字
@@ -189,7 +189,7 @@ class WinVerify(WinguiVerify):
                 self.loadImg()
 
     def loadImg(self):
-        background_image = self.captchar_data['bigImage']
+        background_image = self.captcha_data['bigImage']
 
         imgdata = base64.b64decode(background_image)
         im = PILImage.open(io.BytesIO(imgdata))
@@ -197,7 +197,7 @@ class WinVerify(WinguiVerify):
         im = im.resize((int(300 * 1.5), int(170 * 1.5)), PILImage.LANCZOS)
         im = ImageTk.PhotoImage(im)
 
-        imgdata_slide = base64.b64decode(self.captchar_data['smallImage'])
+        imgdata_slide = base64.b64decode(self.captcha_data['smallImage'])
         im_slide = PILImage.open(io.BytesIO(imgdata_slide))
         width_slide, height_slide = im_slide.size
         im_slide = im_slide.resize(
@@ -716,8 +716,9 @@ if __name__ == "__main__":
                 win_login.update()
             else:
                 print("登录窗口关闭")
+                # 退出程序
                 win.destroy()
-                exit(0)
+                sys.exit()
         username = win_login.username
         password = win_login.password
         print("登录窗口：", username, password)
@@ -744,14 +745,14 @@ if __name__ == "__main__":
         if need_login:
             capt_cha = Captcha(captcha_id, captcha_referer)
 
-            win_verify = WinVerify(capt_cha.captchar_data, capt_cha.conf)
+            win_verify = WinVerify(capt_cha.captcha_data, capt_cha.conf)
             while win_verify.check_res is None or not win_verify.success:
                 if win_verify.winfo_exists():
                     win_verify.update()
                 else:
                     print("验证码窗口关闭")
                     win.destroy()
-                    exit(0)
+                    sys.exit()
             win_verify.destroy()
             if win_verify.success and win_verify.check_res is not None:
                 print("check_res", win_verify.check_res)
@@ -784,39 +785,40 @@ if __name__ == "__main__":
                     win_login.success = False
             else:
                 print("验证码验证出现未知错误")
-                # exit(0)
                 win.destroy()
+                sys.exit()
+    if login_success:
+        # 登录完成
+        # 获取真实姓名
+        real_name = zhihuishu.get_real_name()
+        win.tk_label_lqwivlzb['text'] = real_name
 
-    # 登录完成
-    # 获取真实姓名
-    real_name = zhihuishu.get_real_name()
-    win.tk_label_lqwivlzb['text'] = real_name
+        # 获取课程列表
+        zhihuishu.get_all_class()
 
-    # 获取课程列表
-    zhihuishu.get_all_class()
+        win_login.destroy()
 
-    win_login.destroy()
+        # 选课界面
+        win_select_class = WinguiSelectClass(zhihuishu.class_list)
 
-    # 选课界面
-    win_select_class = WinguiSelectClass(zhihuishu.class_list)
+        while win_select_class.select_class is None:
+            if win_select_class.winfo_exists():
+                win_select_class.update()
+            else:
+                print("选择课程窗口关闭")
+                win.destroy()
+                sys.exit()
 
-    while win_select_class.select_class is None:
-        if win_select_class.winfo_exists():
-            win_select_class.update()
-        else:
-            print("选择课程窗口关闭")
-            win.destroy()
-            exit(0)
+        if win_select_class.select_class is not None:
+            # 选课完成，准备播放
+            zhihuishu.class_data['recruitAndCourseId'] = win_select_class.select_class
+            zhihuishu.get_videolist()
+            zhihuishu.get_study_info()
+            zhihuishu.query_course()
 
-    # 选课完成，准备播放
-    zhihuishu.class_data['recruitAndCourseId'] = win_select_class.select_class
-    zhihuishu.get_videolist()
-    zhihuishu.get_study_info()
-    zhihuishu.query_course()
+            win.list_data = zhihuishu.video_data
+            win.insert_data()
+            win.deiconify()
 
-    win.list_data = zhihuishu.video_data
-    win.insert_data()
-    win.deiconify()
-
-    win_select_class.destroy()
-    win.mainloop()
+            win_select_class.destroy()
+            win.mainloop()

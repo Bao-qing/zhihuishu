@@ -563,6 +563,7 @@ class Zhihuishu:
 
         response = requests.post(url, cookies=self.cookies, data=data, headers=headers)
         # print("post_class:", response.json()['message'])
+
         self.log = response.json()['message']
 
     def pre_learning_note(self, class_id):

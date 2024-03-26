@@ -326,7 +326,21 @@ class Zhihuishu:
             "secretStr": encrypt_aes_cbc_pkcs7(str(to_encrypt_).replace("'", '"'), self.key, self.iv),
             "dateFormate": str(date_formate)
         }
-        response = requests.post(url, headers=headers, data=data, cookies=self.cookies)
+
+        complete = -1
+        retry_times = 0
+        while complete == -1 and retry_times < 10:
+            try:
+                response = requests.post(url, headers=headers, data=data, cookies=self.cookies)
+                complete = 0
+                retry_times += 1
+            except Exception as e:
+                self.log = "retry_times:" + str(retry_times) + " get_pop_up_exam_list"
+                self.output_log("获取弹窗题目list失败:")
+                self.output_log(str(e))
+                retry_times += 1
+
+
         self.output_log("获取弹窗题目list:")
         self.output_log(response.text)
         pop_exam_res = response.json()
@@ -369,7 +383,22 @@ class Zhihuishu:
             "secretStr": encrypt_aes_cbc_pkcs7(str(to_encrypt_).replace("'", '"'), self.key, self.iv),
             "dateFormate": str(date_formate)
         }
-        response = requests.post(url, headers=headers, data=data, cookies=self.cookies)
+
+        complete = -1
+        retry_times = 0
+        while complete == -1 and retry_times < 10:
+            try:
+                response = requests.post(url, headers=headers, data=data, cookies=self.cookies)
+                complete = 0
+                retry_times += 1
+            except Exception as e:
+                self.log = "retry_times:" + str(retry_times) + " get_pop_up_exam_detail"
+                self.output_log("获取弹窗题目详情失败:")
+                self.output_log(str(e))
+                retry_times += 1
+
+
+
         self.output_log("获取弹窗题目详情:")
         self.output_log(response.text)
 
@@ -395,8 +424,8 @@ class Zhihuishu:
                 if answer['result'] == "1":
                     answers.append(str(answer['id']))
 
-            to_encrypt_ = {"courseId": 1000102147,
-                           "recruitId": 244565,
+            to_encrypt_ = {"courseId": self.courseId,
+                           "recruitId": self.recruitId,
                            "testQuestionId": question['testQuestion']['questionId'],
                            "isCurrent": "1",
                            "lessonId": lessonId,
@@ -416,7 +445,21 @@ class Zhihuishu:
                 "secretStr": encrypt_aes_cbc_pkcs7(str(to_encrypt_).replace("'", '"'), self.key, self.iv),
                 "dateFormate": str(date_formate)
             }
-            response = requests.post(url, headers=headers, data=data, cookies=self.cookies)
+
+            complete = -1
+            retry_times = 0
+            while complete == -1 and retry_times < 10:
+                try:
+                    response = requests.post(url, headers=headers, data=data, cookies=self.cookies)
+                    complete = 0
+                    retry_times += 1
+                except Exception as e:
+                    self.log = "retry_times:" + str(retry_times) + " save_pop_up_exam"
+                    self.output_log("提交弹窗题目答案失败:")
+                    self.output_log(str(e))
+                    retry_times += 1
+
+
             self.output_log("提交弹窗题目答案:")
             self.output_log(response.text)
 
@@ -579,7 +622,15 @@ class Zhihuishu:
                 'courseId': self.courseId,
             }
 
-            self.post_class(post_data)
+            complete = -1
+            retry_times = 0
+            while complete == -1 and retry_times < 10:
+                if retry_times > 0:
+                    self.log = "retry_times:" + str(retry_times) + " post_class"
+
+                complete = self.post_class(post_data)
+                retry_times += 1
+
             self.finished_block = i
             print("已完成：" + str(i) + "/" + str(round(total_time / 10)))
 
@@ -593,14 +644,22 @@ class Zhihuishu:
         url = "https://studyservice-api.zhihuishu.com/gateway/t/v1/learning/saveDatabaseIntervalTimeV2"
         data = "secretStr=" + encrypt_aes_cbc_pkcs7(str(postData).replace("'", '"'), self.key, self.iv)
         # print(encrypt_aes_cbc_pkcs7(str(postData).replace("'", '"'), self.key, self.iv))
-
-        response = requests.post(url, cookies=self.cookies, data=data, headers=headers)
+        try:
+            response = requests.post(url, cookies=self.cookies, data=data, headers=headers)
+        except Exception as e:
+            print(e)
+            self.log = "post_class错误"
+            self.output_log("post_class错误")
+            self.output_log(str(e))
+            return -1
 
         self.output_log("post_class:")
         self.output_log(response.text)
         # print("post_class:", response.json()['message'])
 
         self.log = response.json()['message']
+
+        return 0
 
     def pre_learning_note(self, class_id):
         import requests

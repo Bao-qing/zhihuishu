@@ -77,6 +77,8 @@ class Zhihuishu:
         cookies = {"jt-cas": self.cookies.get("jt-cas")}
 
         response = requests.post(url, headers=headers, cookies=cookies, data=data)
+        self.output_log("获取课程列表:")
+        self.output_log(response.text)
 
         try:
 
@@ -123,6 +125,8 @@ class Zhihuishu:
         }
 
         response = requests.post(url, data=data, headers=headers)
+        self.output_log("login:")
+        self.output_log(response.text)
         try:
             response_json = response.json()
 
@@ -182,6 +186,9 @@ class Zhihuishu:
         response = requests.get(url, headers=headers, cookies=self.cookies, params=params,
                                 allow_redirects=False)
 
+        self.output_log("login2:")
+        self.output_log(response.text)
+
         print("login2:", response.text)
         # print(response.text)
         # print(response)
@@ -207,6 +214,8 @@ class Zhihuishu:
         # print(response)
 
         print(self.cookies)
+        self.output_log("cookies:")
+        self.output_log(str(self.cookies))
 
         # 保存cookies,fp,vaildate
         with open("cookies.json", "w") as f:
@@ -228,6 +237,9 @@ class Zhihuishu:
         # data = "secretStr=QhSgx0MEvvp0jRL20aaxWrXZYS%2F7NpyvaxFF5i8yEdUC0od6TN2zhNHxLPe53K4QZk0iJZX5DHKsdURDV9qsC7owkrF40cd%2FqJw1NxfwcCqOlIapESCmBFwJLBMJnVuo&dateFormate=1703742779000"
 
         response = requests.post(url, headers=headers, cookies=self.cookies, data=data)
+        self.output_log("获取视频列表:")
+        self.output_log(response.text)
+
         response_json = response.json()
         print("获取sp列表:", response_json)
 
@@ -276,13 +288,17 @@ class Zhihuishu:
 
         data = "secretStr=" + encrypt_aes_cbc_pkcs7(str(all_class).replace("'", '"'), self.key, self.iv)
         response = requests.post(url, headers=headers, cookies=self.cookies, data=data)
+        self.output_log("获取学习信息:")
+        self.output_log(response.text)
+
         self.study_info = response.json()["data"]
 
-        for video_id, video_info in self.study_info["lv"].items():
-            try:
-                video_data[str(video_id)].update(video_info)
-            except:
-                pass
+        if "lv" in self.study_info:
+            for video_id, video_info in self.study_info["lv"].items():
+                try:
+                    video_data[str(video_id)].update(video_info)
+                except:
+                    pass
         for video_id, video_info in self.study_info["lesson"].items():
             try:
                 video_data[str(video_id)].update(video_info)
@@ -311,6 +327,8 @@ class Zhihuishu:
             "dateFormate": str(date_formate)
         }
         response = requests.post(url, headers=headers, data=data, cookies=self.cookies)
+        self.output_log("获取弹窗题目list:")
+        self.output_log(response.text)
         pop_exam_res = response.json()
         if pop_exam_res["code"] == 0:
             print("获取弹窗题目成功")
@@ -352,6 +370,9 @@ class Zhihuishu:
             "dateFormate": str(date_formate)
         }
         response = requests.post(url, headers=headers, data=data, cookies=self.cookies)
+        self.output_log("获取弹窗题目详情:")
+        self.output_log(response.text)
+
         pop_exam_detail_res = response.json()
         if pop_exam_detail_res["code"] == 0:
             print("获取弹窗题目详情成功")
@@ -396,6 +417,9 @@ class Zhihuishu:
                 "dateFormate": str(date_formate)
             }
             response = requests.post(url, headers=headers, data=data, cookies=self.cookies)
+            self.output_log("提交弹窗题目答案:")
+            self.output_log(response.text)
+
             save_answer_res = response.json()
             if save_answer_res["code"] == 0:
                 print("提交弹窗题目答案成功")
@@ -417,6 +441,10 @@ class Zhihuishu:
         url = "https://studyservice-api.zhihuishu.com/gateway/t/v1/learning/queryCourse"
         data = "secretStr=" + encrypt_aes_cbc_pkcs7(str(course_data).replace("'", '"'), self.key, self.iv)
         response = requests.post(url, headers=headers, cookies=self.cookies, data=data)
+
+        self.output_log("获取课程信息:")
+        self.output_log(response.text)
+
         response_json = response.json()
         self.recruitId = response_json["data"]["recruitId"]
         self.courseId = response_json["data"]["courseInfo"]["courseId"]
@@ -437,7 +465,12 @@ class Zhihuishu:
             "dateFormate": "1704220652000"
         }
         response = requests.get(url, cookies=self.cookies, params=params, headers=headers)
+        self.output_log("获取姓名:")
+        self.output_log(response.text)
+
+
         print("realname:", response.text)
+
 
         try:
             json_data = response.json()
@@ -562,6 +595,9 @@ class Zhihuishu:
         # print(encrypt_aes_cbc_pkcs7(str(postData).replace("'", '"'), self.key, self.iv))
 
         response = requests.post(url, cookies=self.cookies, data=data, headers=headers)
+
+        self.output_log("post_class:")
+        self.output_log(response.text)
         # print("post_class:", response.json()['message'])
 
         self.log = response.json()['message']
@@ -586,6 +622,10 @@ class Zhihuishu:
             "dateFormate": "1703765635000"
         }
         response = requests.post(url, cookies=self.cookies, data=data, headers=headers)
+
+        self.output_log("pre_learning_note:")
+        self.output_log(response.text)
+
         print("获取视频播放进度成功")
         try:
             return response.json()["data"]['studiedLessonDto']
@@ -593,3 +633,7 @@ class Zhihuishu:
             # print(self.video_data)
             print("获取视频播放进度失败")
             print(response.text)
+
+    def output_log(self,data):
+        with open("log.txt", "a") as f:
+            f.write(data + "\n\n")

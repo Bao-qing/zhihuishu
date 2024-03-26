@@ -635,5 +635,5 @@ class Zhihuishu:
             print(response.text)
 
     def output_log(self,data):
-        with open("log.txt", "a") as f:
+        with open("log.txt", "a",encoding="UTF-8") as f:
             f.write(data + "\n\n")
